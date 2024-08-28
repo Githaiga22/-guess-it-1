@@ -1,50 +1,45 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
-	"strings"
 
 	"allan/src"
 )
 
 func main() {
-	var numbers []float64
-	isFirstInput := true
+	scanner := bufio.NewScanner(os.Stdin)
 
-	for {
-		var input string
+	var data []float64
+	windowSize := 10 // Increase the window size for better accuracy
 
-		// Get number from buffer
-		_, err := fmt.Scanln(&input)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		value, err := strconv.ParseFloat(line, 64)
 		if err != nil {
-			fmt.Println("Error reading input:", err)
-			os.Exit(1)
+			continue // skip non-numeric values
+		}
+		data = append(data, value)
+
+		// Ensure that we're only using the last 'windowSize' numbers
+		if len(data) > windowSize {
+			data = data[len(data)-windowSize:]
 		}
 
-		// Trim any whitespace and newline characters
-		input = strings.TrimSpace(input)
+		// Only calculate if we have enough data points
+		if len(data) > 1 {
+			mean := src.Mean(data)
+			stDev := math.Sqrt(src.Variance(data))
 
-		// Convert the input to a float
-		floatValue, err := strconv.ParseFloat(input, 64)
-		if err != nil {
-			fmt.Println("Error converting input to float:", err)
-			os.Exit(1)
+			// Use a very high multiplier for 99.99% confidence
+			lowerBound := int(mean - 3.89*stDev) // Slightly more than 3.89
+			upperBound := int(mean + 3.89*stDev)
+
+			fmt.Printf("%d %d\n", lowerBound, upperBound)
 		}
-
-		// Append the number to the slice
-		numbers = append(numbers, floatValue)
-
-		// Provide upper and lower limit
-		var lower, upper float64
-		if isFirstInput {
-			lower, upper = src.CalculateRange(numbers, true)
-			isFirstInput = false
-		} else {
-			lower, upper = src.CalculateRange(numbers, false)
-		}
-
-		fmt.Printf("%.0f %.0f\n", lower, upper)
 	}
 }
